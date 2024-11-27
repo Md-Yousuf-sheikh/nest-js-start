@@ -21,8 +21,12 @@ model User {
   email String @unique
   hash  String
 
-  firstName String
-  lastName  String
+  firstName String?
+  lastName  String?
+
+  bookmarks Bookmark[]
+
+  @@map("users")
 }
 
 model Bookmark {
@@ -33,4 +37,9 @@ model Bookmark {
   title       String
   description String?
   link        String
+  
+  User        User?   @relation(fields: [userId], references: [id])
+  userId      Int?
+
+  @@map("bookmarks")
 }
