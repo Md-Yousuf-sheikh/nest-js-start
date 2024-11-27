@@ -7,9 +7,8 @@ import * as argon from 'argon2';
 export class AuthService {
   constructor(private prisma: PrismaService) {}
   async signup(dto: AuthDto) {
-    // generate the password hash
-
     try {
+      // generate the password hash
       const hash = await argon.hash(dto.password);
       // save the user db
       const user = await this.prisma.user.create({
@@ -18,20 +17,49 @@ export class AuthService {
           hash: hash,
         },
       });
-
-      console.log('user', user);
-
+      // return the user
       return { msg: 'I have signed up', data: user };
     } catch (error) {
+      // check error P2002
       if (error.code === 'P2002') {
         throw new ForbiddenException('Credentials taken');
       }
-
+      // throw any other error
       throw error;
     }
   }
 
-  signin() {
-    return { msg: 'I have logged in' };
+  async signin(dto: AuthDto) {
+    try {
+      //  find the user by email
+      const user = await this.prisma.user.findUnique({
+        where: {
+          email: dto.email,
+        },
+      });
+
+      // if user does not exist throw exception
+      if (!user) {
+        throw new ForbiddenException('Invalid credentials');
+      }
+
+      //  compress the password hash
+      const passwordMatch = await argon.verify(user.hash, dto.password);
+      // if password incorrect throw exception
+
+      if (!passwordMatch) {
+        throw new ForbiddenException('Invalid credentials');
+      }
+      delete user.hash;
+      // send back the user
+      return { msg: 'I have logged in', data: user };
+    } catch (error) {
+      // check error P2002
+      if (error.code === 'P2002') {
+        throw new ForbiddenException('Credentials taken');
+      }
+      // throw any other error
+      throw error;
+    }
   }
 }
